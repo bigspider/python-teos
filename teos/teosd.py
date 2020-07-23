@@ -198,7 +198,7 @@ def main(config):
 
             # start the RPC server
             logger.info(f'Starting RPC Server on {config.get("RPC_BIND")}:{config.get("RPC_PORT")}')
-            rpc = RPC(config.get("RPC_BIND"), config.get("RPC_PORT"), rw_lock, inspector, watcher)
+            rpc = RPC(config.get("RPC_BIND"), config.get("RPC_PORT"), rw_lock, inspector, watcher, responder)
             threading.Thread(target=rpc.start, daemon=True).start()
 
             # start the API server

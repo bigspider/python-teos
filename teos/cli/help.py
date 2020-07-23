@@ -22,3 +22,14 @@ def help_get_all_appointments():
         "\n\nDESCRIPTION:"
         "\n\n\tGets information about all appointments stored in the tower.\n"
     )
+
+
+def help_get_tower_info():
+    return (
+        "NAME:"
+        "\tpython teos_cli get_tower_info - Gets generic information about the tower."
+        "\n\nUSAGE:"
+        "\tpython teos_cli.py get_tower_info"
+        "\n\nDESCRIPTION:"
+        "\n\n\tGets generic information about the tower, like the tower_id and aggregate data on users and appointments.\n"
+    )

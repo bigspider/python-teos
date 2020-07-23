@@ -18,25 +18,10 @@ from teos.cli.help import show_usage, help_get_all_appointments
 
 
 def make_rpc_request(rpc_url, method, *args):
-    return requests.post(
-        url=rpc_url, json={"method": method, "params": args, "jsonrpc": "2.0", "id": uuid4().int}, timeout=5
-    )
-
-
-def get_all_appointments(rpc_url):
-    """
-    Gets information about all appointments stored in the tower, if the user requesting the data is an administrator.
-
-    Args:
-        rpc_url (:obj:`str`): the url ofr the teos RPC.
-
-    Returns:
-        :obj:`dict` a dictionary containing all the appointments stored by the Responder and Watcher if the tower
-        responds.
-    """
-
     try:
-        response = make_rpc_request(rpc_url, "get_all_appointments")
+        response = requests.post(
+            url=rpc_url, json={"method": method, "params": args, "jsonrpc": "2.0", "id": uuid4().int}, timeout=5,
+        )
         if response.status_code != constants.HTTP_OK:
             print(
                 f"The server returned an error. Status code: {response.status_code}. Reason: {response.reason}",
@@ -54,6 +39,35 @@ def get_all_appointments(rpc_url):
     except requests.exceptions.Timeout:
         print("The request timed out", file=sys.stderr)
         return None
+
+
+def get_all_appointments(rpc_url):
+    """
+    Gets information about all appointments stored in the tower, if the user requesting the data is an administrator.
+
+    Args:
+        rpc_url (:obj:`str`): the url of the teos RPC.
+
+    Returns:
+        :obj:`dict` a dictionary containing all the appointments stored by the Responder and Watcher if the tower
+        responds.
+    """
+
+    return make_rpc_request(rpc_url, "get_all_appointments")
+
+
+def get_tower_info(rpc_url):
+    """
+    Gets general information about the tower.
+
+    Args:
+        rpc_url (:obj:`str`): the url of the teos RPC.
+
+    Returns:
+        :obj:`dict` a dictionary containing info about the tower (TODO).
+    """
+
+    return make_rpc_request(rpc_url, "get_tower_info")
 
 
 def main(command, args, command_line_conf):
@@ -76,12 +90,20 @@ def main(command, args, command_line_conf):
             if appointment_data:
                 print(appointment_data)
 
+        if command == "get_tower_info":
+            appointment_data = get_tower_info(teos_rpc_url)
+            if appointment_data:
+                print(appointment_data)
+
         elif command == "help":
             if args:
                 command = args.pop(0)
 
                 if command == "get_all_appointments":
                     sys.exit(help_get_all_appointments())
+
+                if command == "get_all_appointments":
+                    sys.exit(help_get_tower_info())
 
                 else:
                     sys.exit("Unknown command. Use help to check the list of available commands")
@@ -99,7 +121,7 @@ def main(command, args, command_line_conf):
 
 if __name__ == "__main__":
     command_line_conf = {}
-    commands = ["get_all_appointments", "help"]
+    commands = ["get_all_appointments", "get_tower_info", "help"]
 
     try:
         opts, args = getopt(argv[1:], "h", ["rpcbind=", "rpcport=", "help"])
