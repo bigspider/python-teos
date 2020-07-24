@@ -44,3 +44,14 @@ def help_get_users():
         "\n\nDESCRIPTION:"
         "\n\n\tGets an array with the user ids of all the users registered to the tower.\n"
     )
+
+
+def help_get_user():
+    return (
+        "NAME:"
+        "\tpython teos_cli get_user - Gets information about a specific user."
+        "\n\nUSAGE:"
+        '\tpython teos_cli.py get_user "user_id"'
+        "\n\nDESCRIPTION:"
+        "\n\n\tGets information about a specific user.\n"
+    )

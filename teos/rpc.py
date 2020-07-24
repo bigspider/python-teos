@@ -107,3 +107,18 @@ class RPC:
 
         with self.rw_lock.gen_rlock():
             return list(self.watcher.gatekeeper.registered_users.keys())
+
+    def get_user(self, user_id):
+        """
+        Returns information about a specific user.
+
+        Args:
+            user_id (:obj:`str`): the user_id of the requested user.
+
+        Returns:
+            :obj:`dict`: the information about the requested user.
+        """
+
+        # TODO: what to do if there's no such user?
+        with self.rw_lock.gen_rlock():
+            return self.watcher.gatekeeper.registered_users[user_id]
