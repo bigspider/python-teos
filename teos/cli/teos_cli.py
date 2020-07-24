@@ -14,7 +14,7 @@ from common.tools import setup_data_folder
 from common.exceptions import InvalidKey, InvalidParameter, SignatureError, TowerResponseError
 
 from teos import DEFAULT_CONF, DATA_DIR, CONF_FILE_NAME
-from teos.cli.help import show_usage, help_get_all_appointments
+from teos.cli.help import show_usage, show_usage, help_get_all_appointments, help_get_tower_info, help_get_users
 
 
 def make_rpc_request(rpc_url, method, *args):
@@ -70,6 +70,20 @@ def get_tower_info(rpc_url):
     return make_rpc_request(rpc_url, "get_tower_info")
 
 
+def get_users(rpc_url):
+    """
+    Gets the list of registered user ids from the tower.
+
+    Args:
+        rpc_url (:obj:`str`): the url of the teos RPC.
+
+    Returns:
+        :obj:`list` the list of registered user ids.
+    """
+
+    return make_rpc_request(rpc_url, "get_users")
+
+
 def main(command, args, command_line_conf):
     # Loads config and sets up the data folder and log file
     config_loader = ConfigLoader(DATA_DIR, CONF_FILE_NAME, DEFAULT_CONF, command_line_conf)
@@ -90,10 +104,11 @@ def main(command, args, command_line_conf):
             if appointment_data:
                 print(appointment_data)
 
-        if command == "get_tower_info":
-            appointment_data = get_tower_info(teos_rpc_url)
-            if appointment_data:
-                print(appointment_data)
+        elif command == "get_tower_info":
+            print(get_tower_info(teos_rpc_url))
+
+        elif command == "get_users":
+            print(get_users(teos_rpc_url))
 
         elif command == "help":
             if args:
@@ -102,8 +117,11 @@ def main(command, args, command_line_conf):
                 if command == "get_all_appointments":
                     sys.exit(help_get_all_appointments())
 
-                if command == "get_all_appointments":
+                if command == "get_tower_info":
                     sys.exit(help_get_tower_info())
+
+                if command == "get_users":
+                    sys.exit(help_get_users())
 
                 else:
                     sys.exit("Unknown command. Use help to check the list of available commands")
@@ -121,7 +139,7 @@ def main(command, args, command_line_conf):
 
 if __name__ == "__main__":
     command_line_conf = {}
-    commands = ["get_all_appointments", "get_tower_info", "help"]
+    commands = ["get_all_appointments", "get_tower_info", "get_users", "help"]
 
     try:
         opts, args = getopt(argv[1:], "h", ["rpcbind=", "rpcport=", "help"])

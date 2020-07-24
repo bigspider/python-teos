@@ -1,3 +1,5 @@
+from typing import List
+
 from flask import Flask
 from flask_jsonrpc import JSONRPC
 
@@ -47,6 +49,10 @@ class RPC:
         def get_tower_info() -> dict:
             return self.get_tower_info()
 
+        @jsonrpc.method("get_users")
+        def get_users() -> List[str]:
+            return self.get_users()
+
     def start(self):
         """ This function starts the Flask server used to run the RPC """
 
@@ -81,13 +87,23 @@ class RPC:
         with self.rw_lock.gen_rlock():
             n_watcher_appointments = len(self.watcher.appointments)
             n_responder_trackers = len(self.responder.trackers)
-
-            registered_users = len(self.watcher.gatekeeper.registered_users)
+            n_registered_users = len(self.watcher.gatekeeper.registered_users)
             tower_id = Cryptographer.get_compressed_pk(self.watcher.signing_key.public_key)
 
         return {
             "tower_id": tower_id,
-            "registered_users": registered_users,
+            "n_registered_users": n_registered_users,
             "n_watcher_appointments": n_watcher_appointments,
             "n_responder_trackers": n_responder_trackers,
         }
+
+    def get_users(self):
+        """
+        Returns the list of registered users.
+
+        Returns:
+            :obj:`list`: A list of the registered user_ids.
+        """
+
+        with self.rw_lock.gen_rlock():
+            return list(self.watcher.gatekeeper.registered_users.keys())

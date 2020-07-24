@@ -33,3 +33,14 @@ def help_get_tower_info():
         "\n\nDESCRIPTION:"
         "\n\n\tGets generic information about the tower, like the tower_id and aggregate data on users and appointments.\n"
     )
+
+
+def help_get_users():
+    return (
+        "NAME:"
+        "\tpython teos_cli get_users - Gets the list of users."
+        "\n\nUSAGE:"
+        "\tpython teos_cli.py get_users"
+        "\n\nDESCRIPTION:"
+        "\n\n\tGets an array with the user ids of all the users registered to the tower.\n"
+    )
