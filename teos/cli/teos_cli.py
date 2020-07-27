@@ -14,7 +14,14 @@ from common.tools import setup_data_folder
 from common.exceptions import InvalidKey, InvalidParameter, SignatureError, TowerResponseError
 
 from teos import DEFAULT_CONF, DATA_DIR, CONF_FILE_NAME
-from teos.cli.help import show_usage, help_get_all_appointments, help_get_tower_info, help_get_users, help_get_user
+from teos.cli.help import (
+    show_usage,
+    help_get_all_appointments,
+    help_get_appointments,
+    help_get_tower_info,
+    help_get_users,
+    help_get_user,
+)
 
 
 def make_rpc_request(rpc_url, method, *args):
@@ -43,17 +50,32 @@ def make_rpc_request(rpc_url, method, *args):
 
 def get_all_appointments(rpc_url):
     """
-    Gets information about all appointments stored in the tower, if the user requesting the data is an administrator.
+    Gets information about all appointments stored in the tower.
 
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
 
     Returns:
-        :obj:`dict` a dictionary containing all the appointments stored by the Responder and Watcher if the tower
-        responds.
+        :obj:`dict` a dictionary containing all the appointments stored by the Responder and Watcher.
     """
 
     return make_rpc_request(rpc_url, "get_all_appointments")
+
+
+def get_appointments(rpc_url, locator):
+    """
+    Gets all the appointments for a specific locator.
+
+    Args:
+        rpc_url (:obj:`str`): the url of the teos RPC.
+        locator (:obj:`str`): the locator of the requested appointment.
+
+    Returns:
+        :obj:`list` a ``list`` where each element is a `dict` with the full information on the appointment and its
+        current status within the tower.
+    """
+
+    return make_rpc_request(rpc_url, "get_appointments", locator)
 
 
 def get_tower_info(rpc_url):
@@ -115,9 +137,15 @@ def main(command, args, command_line_conf):
 
     try:
         if command == "get_all_appointments":
-            appointment_data = get_all_appointments(teos_rpc_url)
-            if appointment_data:
-                print(appointment_data)
+            print(get_all_appointments(teos_rpc_url))
+
+        elif command == "get_appointments":
+            if not args:
+                sys.exit("No locator was given")
+            if len(args) > 1:
+                sys.exit(f"Expected only one argument, not {len(args)}")
+
+            print(get_appointments(teos_rpc_url, args[0]))
 
         elif command == "get_tower_info":
             print(get_tower_info(teos_rpc_url))
@@ -139,6 +167,9 @@ def main(command, args, command_line_conf):
 
                 if command == "get_all_appointments":
                     sys.exit(help_get_all_appointments())
+
+                elif command == "get_appointments":
+                    sys.exit(help_get_appointments())
 
                 elif command == "get_tower_info":
                     sys.exit(help_get_tower_info())
@@ -165,7 +196,7 @@ def main(command, args, command_line_conf):
 
 if __name__ == "__main__":
     command_line_conf = {}
-    commands = ["get_all_appointments", "get_tower_info", "get_users", "get_user", "help"]
+    commands = ["get_all_appointments", "get_appointments", "get_tower_info", "get_users", "get_user", "help"]
 
     try:
         opts, args = getopt(argv[1:], "h", ["rpcbind=", "rpcport=", "help"])

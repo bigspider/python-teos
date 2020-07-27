@@ -24,6 +24,18 @@ def help_get_all_appointments():
     )
 
 
+def help_get_appointments():
+    return (
+        "NAME:"
+        "\tpython teos_cli get_appointments - Gets information about appointments with a certain locator."
+        "\n\nUSAGE:"
+        '\tpython teos_cli.py get_appointments "locator"'
+        "\n\nDESCRIPTION:"
+        "\n\n\tGets information about all the appointments with the given locator. For each appointment, the data\n"
+        "\n\n\tthat is returned include the full appointment receipt, and the current status within the tower.\n"
+    )
+
+
 def help_get_tower_info():
     return (
         "NAME:"
