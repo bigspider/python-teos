@@ -2,6 +2,7 @@ from typing import List
 
 from flask import Flask
 from flask_jsonrpc import JSONRPC
+from flask_jsonrpc.exceptions import InvalidParamsError
 
 from common.appointment import Appointment
 from common.cryptographer import Cryptographer
@@ -109,7 +110,7 @@ class RPC:
                     appointment_data = self.responder.db_manager.load_responder_tracker(uuid)
                     status = "dispute_responded"
                 else:
-                    raise AppointmentNotFound("Cannot find {}".format(locator))
+                    raise InvalidParamsError("Cannot find {}".format(locator))
                 results.append({"appointment": appointment_data, "status": status})
 
             return results
@@ -119,7 +120,9 @@ class RPC:
         Gives generic information about the watchtower.
 
         Returns:
-            :obj:`str`: A dictionary containing information about the watchtower (TODO).
+            :obj:`dict`: A dictionary containing information about the watchtower. It contains the number of
+            appointments in the watcher, the number of trackers in the responder, the total number of registered
+            users and the tower id.
         """
 
         with self.rw_lock.gen_rlock():
@@ -157,6 +160,8 @@ class RPC:
             :obj:`dict`: the information about the requested user.
         """
 
-        # TODO: what to do if there's no such user?
         with self.rw_lock.gen_rlock():
-            return self.watcher.gatekeeper.registered_users[user_id]
+            user = self.watcher.gatekeeper.registered_users.get(user_id)
+            if not user:
+                raise InvalidParamsError("User not found", data={"user_id": user_id})
+            return user

@@ -29,23 +29,28 @@ def make_rpc_request(rpc_url, method, *args):
         response = requests.post(
             url=rpc_url, json={"method": method, "params": args, "jsonrpc": "2.0", "id": uuid4().int}, timeout=5,
         )
-        if response.status_code != constants.HTTP_OK:
-            print(
-                f"The server returned an error. Status code: {response.status_code}. Reason: {response.reason}",
-                file=sys.stderr,
-            )
-            return None
 
-        response_json = json.dumps(response.json()["result"], indent=4, sort_keys=True)
-        return response_json
+        response_json = response.json()
+        if response.status_code != constants.HTTP_OK:
+            error = response_json["error"]
+            if error:
+                print(error.get("message"), file=sys.stderr)
+                if error.get("data"):
+                    print(json.dumps(error["data"], indent=4, sort_keys=True), file=sys.stderr)
+                return
+            else:
+                print(
+                    f"The server returned an error. Status code: {response.status_code}. Reason: {response.reason}",
+                    file=sys.stderr,
+                )
+
+        print(json.dumps(response.json["result"], indent=4, sort_keys=True))
 
     except ConnectionError:
         print("Can't connect to the Eye of Satoshi. RPC server cannot be reached", file=sys.stderr)
-        return None
 
     except requests.exceptions.Timeout:
         print("The request timed out", file=sys.stderr)
-        return None
 
 
 def get_all_appointments(rpc_url):
@@ -54,12 +59,9 @@ def get_all_appointments(rpc_url):
 
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
-
-    Returns:
-        :obj:`dict` a dictionary containing all the appointments stored by the Responder and Watcher.
     """
 
-    return make_rpc_request(rpc_url, "get_all_appointments")
+    make_rpc_request(rpc_url, "get_all_appointments")
 
 
 def get_appointments(rpc_url, locator):
@@ -69,13 +71,9 @@ def get_appointments(rpc_url, locator):
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
         locator (:obj:`str`): the locator of the requested appointment.
-
-    Returns:
-        :obj:`list` a ``list`` where each element is a `dict` with the full information on the appointment and its
-        current status within the tower.
     """
 
-    return make_rpc_request(rpc_url, "get_appointments", locator)
+    make_rpc_request(rpc_url, "get_appointments", locator)
 
 
 def get_tower_info(rpc_url):
@@ -84,12 +82,9 @@ def get_tower_info(rpc_url):
 
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
-
-    Returns:
-        :obj:`dict` a dictionary containing info about the tower (TODO).
     """
 
-    return make_rpc_request(rpc_url, "get_tower_info")
+    make_rpc_request(rpc_url, "get_tower_info")
 
 
 def get_users(rpc_url):
@@ -98,12 +93,9 @@ def get_users(rpc_url):
 
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
-
-    Returns:
-        :obj:`list` the list of registered user ids.
     """
 
-    return make_rpc_request(rpc_url, "get_users")
+    make_rpc_request(rpc_url, "get_users")
 
 
 def get_user(rpc_url, user_id):
@@ -113,12 +105,9 @@ def get_user(rpc_url, user_id):
     Args:
         rpc_url (:obj:`str`): the url of the teos RPC.
         user_id (:obj:`str`): the requested user_id.
-
-    Returns:
-        :obj:`dict` the summary information of the user.
     """
 
-    return make_rpc_request(rpc_url, "get_user", user_id)
+    make_rpc_request(rpc_url, "get_user", user_id)
 
 
 def main(command, args, command_line_conf):
@@ -137,7 +126,7 @@ def main(command, args, command_line_conf):
 
     try:
         if command == "get_all_appointments":
-            print(get_all_appointments(teos_rpc_url))
+            get_all_appointments(teos_rpc_url)
 
         elif command == "get_appointments":
             if not args:
@@ -145,13 +134,13 @@ def main(command, args, command_line_conf):
             if len(args) > 1:
                 sys.exit(f"Expected only one argument, not {len(args)}")
 
-            print(get_appointments(teos_rpc_url, args[0]))
+            get_appointments(teos_rpc_url, args[0])
 
         elif command == "get_tower_info":
-            print(get_tower_info(teos_rpc_url))
+            get_tower_info(teos_rpc_url)
 
         elif command == "get_users":
-            print(get_users(teos_rpc_url))
+            get_users(teos_rpc_url)
 
         elif command == "get_user":
             if not args:
@@ -159,7 +148,7 @@ def main(command, args, command_line_conf):
             if len(args) > 1:
                 sys.exit(f"Expected only one argument, not {len(args)}")
 
-            print(get_user(teos_rpc_url, args[0]))
+            get_user(teos_rpc_url, args[0])
 
         elif command == "help":
             if args:
