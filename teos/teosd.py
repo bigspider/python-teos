@@ -3,6 +3,7 @@ import daemon
 import subprocess
 from sys import argv, exit
 from multiprocessing import Process
+from threading import Thread
 from getopt import getopt, GetoptError
 from signal import signal, SIGINT, SIGQUIT, SIGTERM
 
@@ -203,21 +204,21 @@ def main(config):
             internal_api.rpc_server.start()
             internal_api.logger.info(f"Initialized. Serving at {internal_api.endpoint}")
 
-            # Start the API (using gunicorn) and the RPC server
-            # FIXME: We may like to add workers depending on a config value
-            subprocess.Popen(
-                [
-                    "gunicorn",
-                    f"--bind={config.get('API_BIND')}:{config.get('API_PORT')}",
-                    f"teos.api:serve(internal_api_endpoint='{INTERNAL_API_ENDPOINT}', "
-                    f"min_to_self_delay='{config.get('MIN_TO_SELF_DELAY')}', log_file='{config.get('LOG_FILE')}')",
-                ]
-            )
-            Process(
-                target=rpc.serve,
-                args=(config.get("RPC_BIND"), config.get("RPC_PORT"), INTERNAL_API_ENDPOINT),
-                daemon=True,
+            # # Start the API (using gunicorn) and the RPC server
+            # # FIXME: We may like to add workers depending on a config value
+            # subprocess.Popen(
+            #     [
+            #         "gunicorn",
+            #         f"--bind={config.get('API_BIND')}:{config.get('API_PORT')}",
+            #         f"teos.api:serve(internal_api_endpoint='{INTERNAL_API_ENDPOINT}', "
+            #         f"min_to_self_delay='{config.get('MIN_TO_SELF_DELAY')}', log_file='{config.get('LOG_FILE')}')",
+            #     ]
+            # )
+            Thread(
+                target=rpc.serve, args=(config.get("RPC_BIND"), config.get("RPC_PORT"), INTERNAL_API_ENDPOINT),
             ).start()
+
+            # rpc.serve(config.get("RPC_BIND"), config.get("RPC_PORT"), INTERNAL_API_ENDPOINT)
 
             # Hang there until a stop command is received
             internal_api.rpc_server.wait_for_termination()
