@@ -68,7 +68,7 @@ def serve(internal_api_endpoint, endpoint, min_to_self_delay, auto_run=False):
         endpoint (:obj:`str`): endpoint where the http api will be running (host:port).
         min_to_self_delay (:obj:`str`): the minimum to_self_delay accepted by the Inspector.
         auto_run (:obj:`bool`): whether the server should be started by this process. False if run with an external
-            WSGI. True is run by Flask.
+            WSGI. True if run by Flask.
 
     Returns:
         The application object needed by the WSGI server to run if ``auto_run`` if ``False``, ``None`` otherwise.

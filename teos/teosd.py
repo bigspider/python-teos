@@ -65,6 +65,8 @@ class TeosDaemon:
         config (:obj:`dict`): the configuration object.
         sk (:obj:`PrivateKey`): the ``PrivateKey`` of the tower.
         logger: the logger instance
+        ready_event: (:obj:`multiprocessing.Event` or :obj:`None`): if given, an Event that will be set as soon as the
+            all the components and services are initialized, therefore the tower is ready to use.
 
     Attributes:
         stop_command_event (:obj:`threading.Event`): the Event that will be set to initiate a graceful shutdown.
@@ -84,9 +86,10 @@ class TeosDaemon:
         self.internal_api (:obj:`teos.internal_api.InternalAPI`): the InternalAPI instance.
     """
 
-    def __init__(self, config, sk, logger):
+    def __init__(self, config, sk, logger, ready_event=None):
         self.config = config
         self.logger = logger
+        self.ready_event = ready_event
 
         # event triggered when a ``stop`` command is issued
         # Using multiprocessing.Event seems to cause a deadlock if event.set() is called in a signal handler that
@@ -325,12 +328,25 @@ class TeosDaemon:
         self.bootstrap_components()
         self.start_services()
 
+        if self.ready_event:
+            self.ready_event.set()
+
         self.stop_command_event.wait()
 
         self.teardown()
 
 
-def main(config):
+def main(config, ready_event=None):
+    """
+    Main startup script of TEOS. It sets up the data folder and logging, creates the tower keys if necessary, then
+    creates and starts the TeosDaemon.
+
+    Args:
+        config (:obj:`dict`): a dictionary containing all the system's configuration parameters
+        ready_event (:obj:`multiprocessing.Event` or :obj:`None`): if given, an Event that will be set as soon as TEOS
+            is fully initialized.
+    """
+
     setup_data_folder(config.get("DATA_DIR"))
 
     silent = config.get("DAEMON")
@@ -359,7 +375,7 @@ def main(config):
         sk = Cryptographer.load_private_key_der(secret_key_der)
 
     try:
-        TeosDaemon(config, sk, logger).start()
+        TeosDaemon(config, sk, logger, ready_event=ready_event).start()
     except Exception as e:
         logger.error("An error occurred: {}. Shutting down".format(e))
         exit(1)
