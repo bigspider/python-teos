@@ -68,6 +68,10 @@ class _RPC(TowerServicesServicer):
     Args:
         internal_api_endpoint (:obj:`str`): the endpoint where to reach the internal (gRPC) api.
         logger (:obj:`Logger <teos.logger.Logger>`): the logger for this component.
+
+    Attributes:
+        channel (:obj:`grpc.Channel`): the Channel object
+        stub (:obj:`TowerServicesStub`): the rpc client stub
     """
 
     def __init__(self, internal_api_endpoint, logger):

@@ -60,7 +60,7 @@ class RPCClient:
 
     Attributes:
         channel (:obj:`grpc.Channel`): the Channel object
-        stub: the rpc client stub
+        stub (:obj:`TowerServicesStub`): the rpc client stub
     """
 
     def __init__(self, rpc_host, rpc_port):
