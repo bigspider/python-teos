@@ -8,8 +8,11 @@ from shutil import rmtree, copy
 from decimal import Decimal, getcontext
 
 from teos.teosd import get_config
-from teos.utils.auth_proxy import AuthServiceProxy, JSONRPCException
 
+import bitcoin
+import bitcoin.rpc
+
+bitcoin.SelectParams("regtest")
 
 getcontext().prec = 10
 utxos = list()
@@ -19,7 +22,7 @@ btc_addr = None
 cmd_args = {"BTC_NETWORK": "regtest"}
 config = get_config(cmd_args, ".teos")
 
-bitcoin_cli = AuthServiceProxy(
+bitcoin_cli = bitcoin.rpc.Proxy(
     "http://%s:%s@%s:%d"
     % (
         config.get("BTC_RPC_USER"),
@@ -37,20 +40,22 @@ def prng_seed():
 
 @pytest.fixture(scope="session")
 def run_bitcoind(dirname=".test_bitcoin"):
-    # Run bitcoind in a separate folder
-    makedirs(dirname, exist_ok=True)
+    try:
+        # Run bitcoind in a separate folder
+        makedirs(dirname, exist_ok=True)
 
-    bitcoind = os.getenv("BITCOIND", "bitcoind")
+        bitcoind = os.getenv("BITCOIND", "bitcoind")
 
-    copy(os.path.join(os.path.dirname(__file__), "bitcoin.conf"), dirname)
-    subprocess.Popen([bitcoind, f"--datadir={dirname}"])
+        copy(os.path.join(os.path.dirname(__file__), "bitcoin.conf"), dirname)
+        subprocess.Popen([bitcoind, f"--datadir={dirname}"])
 
-    # Generate some initial blocks
-    setup_node()
-    yield
+        # Generate some initial blocks
+        setup_node()
+        yield
 
-    bitcoin_cli.stop()
-    rmtree(dirname)
+    finally:
+        bitcoin_cli.call("stop")
+        rmtree(dirname)
 
 
 def setup_node():
@@ -60,7 +65,7 @@ def setup_node():
     while True:
         # FIXME: Not creating a new bitcoin_cli here creates one of those Request-Sent errors I don't know how to fix
         #        Not a big deal, but it would be nicer not having to.
-        bitcoin_cli = AuthServiceProxy(
+        bitcoin_cli = bitcoin.rpc.Proxy(
             "http://%s:%s@%s:%d"
             % (
                 config.get("BTC_RPC_USER"),
@@ -73,11 +78,10 @@ def setup_node():
             btc_addr = bitcoin_cli.getnewaddress()
             break
 
-        except ConnectionError:
+        except (ConnectionError, bitcoin.rpc.InWarmupError):
             sleep(1)
-        except JSONRPCException as e:
-            if "Loading wallet..." in str(e):
-                sleep(1)
+
+    print("Address:", btc_addr)
 
     # Mine enough blocks so coinbases are mature and we have enough funds to run everything
     bitcoin_cli.generatetoaddress(105, btc_addr)
@@ -86,17 +90,20 @@ def setup_node():
 
 def create_initial_transactions(fee=Decimal("0.00005")):
     utxos = bitcoin_cli.listunspent()
-    btc_addresses = [bitcoin_cli.getnewaddress() for _ in range(100)]
+    btc_addresses = [str(bitcoin_cli.getnewaddress()) for _ in range(100)]
     for utxo in utxos:
         # Create 100 outputs per utxo and mine a new block.
-        tx_ins = {"txid": utxo.get("txid"), "vout": utxo.get("vout")}
+        outpoint = utxo.get("outpoint")
+        tx_ins = {"txid": outpoint.hash.hex(), "vout": outpoint.n}
 
-        tx_outs = {btc_address: utxo.get("amount") / 100 for btc_address in btc_addresses[:-1]}
-        tx_outs[btc_addresses[-1]] = (utxo.get("amount") / 100) - fee
+        amount = Decimal(utxo.get("amount") / 100_000_000)
+        tx_outs = {btc_address: str(amount / 100) for btc_address in btc_addresses[:-1]}
+        tx_outs[btc_addresses[-1]] = str((amount / 100) - fee)
 
-        raw_tx = bitcoin_cli.createrawtransaction([tx_ins], tx_outs)
-        signed_tx = bitcoin_cli.signrawtransactionwithwallet(raw_tx)
-        bitcoin_cli.sendrawtransaction(signed_tx.get("hex"))
+        raw_tx_hex = bitcoin_cli.call("createrawtransaction", [tx_ins], tx_outs)
+        tx = bitcoin.rpc.CTransaction.deserialize(bytes.fromhex(raw_tx_hex))
+        signed_tx = bitcoin_cli.signrawtransactionwithwallet(tx)
+        bitcoin_cli.sendrawtransaction(signed_tx.get("tx"))
 
         bitcoin_cli.generatetoaddress(1, btc_addr)
 
@@ -157,7 +164,7 @@ def create_commitment_tx(utxo=None, destination=None, fee=Decimal("0.00001")):
     commitment_tx_ins = {"txid": utxo.get("txid"), "vout": utxo.get("vout")}
     commitment_tx_outs = {destination: utxo.get("amount") - fee}
 
-    raw_commitment_tx = bitcoin_cli.createrawtransaction([commitment_tx_ins], commitment_tx_outs)
+    raw_commitment_tx = bitcoin_cli.call("createrawtransaction", [commitment_tx_ins], commitment_tx_outs)
     signed_commitment_tx = bitcoin_cli.signrawtransactionwithwallet(raw_commitment_tx)
 
     if not signed_commitment_tx.get("complete"):
@@ -181,7 +188,7 @@ def create_penalty_tx(decoded_commitment_tx, destination=None, fee=Decimal("0.00
         "amount": decoded_commitment_tx.get("vout")[0].get("value"),
     }
 
-    raw_penalty_tx = bitcoin_cli.createrawtransaction([penalty_tx_ins], penalty_tx_outs)
+    raw_penalty_tx = bitcoin_cli.call("createrawtransaction", [penalty_tx_ins], penalty_tx_outs)
     signed_penalty_tx = bitcoin_cli.signrawtransactionwithwallet(raw_penalty_tx, [orphan_info])
 
     if not signed_penalty_tx.get("complete"):

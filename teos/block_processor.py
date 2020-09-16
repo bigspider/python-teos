@@ -1,8 +1,7 @@
 from teos.logger import get_logger
 from common.exceptions import BasicException
 
-from teos.tools import bitcoin_cli
-from teos.utils.auth_proxy import JSONRPCException
+import bitcoin.rpc
 
 
 class InvalidTransactionFormat(BasicException):
@@ -25,6 +24,13 @@ class BlockProcessor:
     def __init__(self, btc_connect_params):
         self.logger = get_logger(component=BlockProcessor.__name__)
         self.btc_connect_params = btc_connect_params
+        service_url = "http://%s:%s@%s:%d" % (
+            btc_connect_params.get("BTC_RPC_USER"),
+            btc_connect_params.get("BTC_RPC_PASSWORD"),
+            btc_connect_params.get("BTC_RPC_CONNECT"),
+            btc_connect_params.get("BTC_RPC_PORT"),
+        )
+        self.proxy = bitcoin.rpc.Proxy(service_url)
 
     def get_block(self, block_hash):
         """
@@ -36,17 +42,17 @@ class BlockProcessor:
         Returns:
             :obj:`dict` or :obj:`None`: A dictionary containing the requested block data if the block is found.
 
+            TODO: fix docs;
             Returns :obj:`None` otherwise.
         """
-
         try:
-            block = bitcoin_cli(self.btc_connect_params).getblock(block_hash)
+            return self.proxy.getblock(block)
+        except:
+            return None
 
-        except JSONRPCException as e:
-            block = None
-            self.logger.error("Couldn't get block from bitcoind", error=e.error)
-
-        return block
+        # except JSONRPCException as e:
+        #     block = None
+        #     self.logger.error("Couldn't get block from bitcoind", error=e.error)
 
     def get_best_block_hash(self):
         """
@@ -57,15 +63,19 @@ class BlockProcessor:
 
             Returns :obj:`None` otherwise (not even sure this can actually happen).
         """
-
         try:
-            block_hash = bitcoin_cli(self.btc_connect_params).getbestblockhash()
+            return self.proxy.getbestblockhash()
+        except:
+            return None
 
-        except JSONRPCException as e:
-            block_hash = None
-            self.logger.error("Couldn't get block hash", error=e.error)
+        # try:
+        #     block_hash = bitcoin_cli(self.btc_connect_params).getbestblockhash()
 
-        return block_hash
+        # except JSONRPCException as e:
+        #     block_hash = None
+        #     self.logger.error("Couldn't get block hash", error=e.error)
+
+        # return block_hash
 
     def get_block_count(self):
         """
@@ -78,13 +88,18 @@ class BlockProcessor:
         """
 
         try:
-            block_count = bitcoin_cli(self.btc_connect_params).getblockcount()
+            return self.proxy.getblockcount()
+        except:
+            return None
 
-        except JSONRPCException as e:
-            block_count = None
-            self.logger.error("Couldn't get block count", error=e.error)
+        # try:
+        #     block_count = bitcoin_cli(self.btc_connect_params).getblockcount()
 
-        return block_count
+        # except JSONRPCException as e:
+        #     block_count = None
+        #     self.logger.error("Couldn't get block count", error=e.error)
+
+        # return block_count
 
     def decode_raw_transaction(self, raw_tx):
         """
@@ -101,15 +116,17 @@ class BlockProcessor:
             :obj:`InvalidTransactionFormat`: If the `provided ``raw_tx`` has invalid format.
         """
 
-        try:
-            tx = bitcoin_cli(self.btc_connect_params).decoderawtransaction(raw_tx)
+        return self.proxy.call("decoderawtransaction", raw_tx)
 
-        except JSONRPCException as e:
-            msg = "Cannot build transaction from decoded data"
-            self.logger.error(msg, error=e.error)
-            raise InvalidTransactionFormat(msg)
+        # try:
+        #     tx = bitcoin_cli(self.btc_connect_params).decoderawtransaction(raw_tx)
 
-        return tx
+        # except JSONRPCException as e:
+        #     msg = "Cannot build transaction from decoded data"
+        #     self.logger.error(msg, error=e.error)
+        #     raise InvalidTransactionFormat(msg)
+
+        # return tx
 
     def get_distance_to_tip(self, target_block_hash):
         """
