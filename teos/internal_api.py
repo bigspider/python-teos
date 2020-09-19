@@ -104,6 +104,10 @@ class _InternalAPI(TowerServicesServicer):
                 msg = "Invalid signature or user does not have enough slots available"
                 status_code = grpc.StatusCode.UNAUTHENTICATED
 
+            except SubscriptionExpired as e:
+                msg = str(e)
+                status_code = grpc.StatusCode.UNAUTHENTICATED
+
             except AppointmentLimitReached:
                 msg = "Appointment limit reached"
                 status_code = grpc.StatusCode.RESOURCE_EXHAUSTED

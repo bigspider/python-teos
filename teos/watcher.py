@@ -344,7 +344,7 @@ class Watcher:
         Raises:
             :obj:`AppointmentLimitReached`: If the tower cannot hold more appointments (cap reached).
             :obj:`AuthenticationFailure`: If the user cannot be authenticated.
-            :obj:`NotEnoughSlots`: If the user does not have enough available slots, so the appointment is rejected.\
+            :obj:`NotEnoughSlots`: If the user does not have enough available slots, so the appointment is rejected.
             :obj:`SubscriptionExpired`: If the user subscription has expired.
         """
 
